@@ -57,9 +57,29 @@ public class MyRequestsScreen {
         Button viewButton = new Button("Refresh My Requests");
         Button cancelButton = new Button("Cancel Selected Request");
         Button donorsButton = new Button("View Interested Donors");
+        Button fulfilledButton = new Button("Confirm Blood Received");
 
         TableView<ObservableList<String>> table = new TableView<>();
+        fulfilledButton.setDisable(true);
 
+        table.getSelectionModel().selectedItemProperty()
+                .addListener((observable, oldValue, newValue) -> {
+
+                    if (newValue == null) {
+                        fulfilledButton.setDisable(true);
+                        return;
+                    }
+
+                    boolean isOpen =
+                            "OPEN".equalsIgnoreCase(newValue.get(6));
+
+                    boolean hasSelectedDonor =
+                            !newValue.get(7).isBlank();
+
+                    fulfilledButton.setDisable(
+                            !isOpen || !hasSelectedDonor
+                    );
+                });
         String[] columns = {
                 "Request ID", "Blood Group", "Hospital",
                 "City", "Units", "Urgency", "Status"
@@ -202,7 +222,8 @@ public class MyRequestsScreen {
         });
 
         // View interested donors
-        donorsButton.setOnAction(event -> {
+        donorsButton.setOnAction(event ->
+        {
 
             ObservableList<String> selectedRow =
                     table.getSelectionModel().getSelectedItem();
@@ -226,6 +247,88 @@ public class MyRequestsScreen {
             showInterestedDonors(requestId, user.getUserId());
         });
 
+
+// Confirm that the blood request has been fulfilled
+        fulfilledButton.setOnAction(event -> {
+
+            ObservableList<String> selectedRow =
+                    table.getSelectionModel().getSelectedItem();
+
+            if (selectedRow == null) {
+                messageLabel.setText("Please select a blood request first.");
+                return;
+            }
+
+            int requestId = Integer.parseInt(selectedRow.get(0));
+
+            if (!"OPEN".equalsIgnoreCase(selectedRow.get(6))
+                    || selectedRow.get(7).isBlank()) {
+
+                messageLabel.setText(
+                        "Only OPEN requests with a selected donor can be fulfilled."
+                );
+                return;
+            }
+
+            Alert confirmation = new Alert(
+                    Alert.AlertType.CONFIRMATION
+            );
+
+            confirmation.setTitle("Confirm Blood Received");
+            confirmation.setHeaderText("Confirm request fulfilment");
+
+            confirmation.setContentText(
+                    "Have you received ALL the requested blood units?\n\n"
+                            + "Request ID: " + requestId
+                            + "\nSelected Donor ID: " + selectedRow.get(7)
+                            + "\n\nThis action will mark the request as FULFILLED."
+            );
+
+            if (confirmation.showAndWait().orElse(
+                    ButtonType.CANCEL) != ButtonType.OK) {
+                return;
+            }
+
+            String sql = """
+            UPDATE blood_requests
+            SET status = 'FULFILLED'
+            WHERE request_id = ?
+              AND seeker_id = ?
+              AND status = 'OPEN'
+              AND selected_donor_id IS NOT NULL
+            """;
+
+            try (Connection connection = DBConnection.getConnection();
+                 PreparedStatement statement =
+                         connection.prepareStatement(sql)) {
+
+                statement.setInt(1, requestId);
+                statement.setInt(2, user.getUserId());
+
+                int updated = statement.executeUpdate();
+
+                if (updated == 1) {
+                    messageLabel.setStyle("-fx-text-fill: green;");
+                    messageLabel.setText(
+                            "Request #" + requestId
+                                    + " has been marked as FULFILLED!"
+                    );
+                } else {
+                    messageLabel.setStyle("-fx-text-fill: red;");
+                    messageLabel.setText(
+                            "Could not fulfil request. Please refresh and try again."
+                    );
+                }
+
+                loadRequests(user.getUserId(), table, messageLabel);
+
+            } catch (SQLException e) {
+                messageLabel.setStyle("-fx-text-fill: red;");
+                messageLabel.setText("Could not update request status.");
+                e.printStackTrace();
+            }
+        });
+
         VBox layout = new VBox(
                 15,
                 title,
@@ -233,6 +336,7 @@ public class MyRequestsScreen {
                 table,
                 cancelButton,
                 donorsButton,
+                fulfilledButton,
                 messageLabel
         );
 
@@ -254,11 +358,8 @@ public class MyRequestsScreen {
                 FXCollections.observableArrayList();
 
         String sql = """
-                SELECT request_id, blood_group, hospital_name,
-                       city, units_needed, urgency, status
-                FROM blood_requests
-                WHERE seeker_id = ?
-                ORDER BY created_at DESC
+                SELECT request_id, blood_group, hospital_name, city, units_needed, urgency, status, selected_donor_id
+                FROM blood_requests WHERE seeker_id = ? ORDER BY created_at DESC
                 """;
 
         try (Connection connection = DBConnection.getConnection();
@@ -281,7 +382,9 @@ public class MyRequestsScreen {
                     row.add(String.valueOf(result.getInt("units_needed")));
                     row.add(result.getString("urgency"));
                     row.add(result.getString("status"));
+                    int selectedDonorId = result.getInt("selected_donor_id");
 
+                    row.add(result.wasNull() ? "" : String.valueOf(selectedDonorId));
                     rows.add(row);
                 }
             }
