@@ -27,7 +27,7 @@ public class DonorDashboard {
         Stage stage = new Stage();
         stage.setTitle("LifeLink - Donor Dashboard");
 
-        Label title = new Label("Donor Dashboard");
+        Label title = new Label("Be Someone's Lifeline ❤️");
         title.setStyle(
                 "-fx-font-size: 28px;" +
                         "-fx-font-weight: bold;" +
@@ -35,12 +35,20 @@ public class DonorDashboard {
         );
 
         Label welcome = new Label(
-                "Welcome, " + user.getFullName() + "!"
+                "Welcome, " + user.getFullName() + " ✨"
         );
-        welcome.setStyle("-fx-font-size: 18px;");
+        welcome.setStyle(
+                "-fx-font-size: 20px;" +
+                        "-fx-font-weight: bold;" +
+                        "-fx-text-fill: #333333;"
+        );
 
         Label info = new Label(
-                "Thank you for being a LifeLink donor."
+                "Your kindness has the power to save lives.🩸 "
+        );
+        info.setStyle(
+                "-fx-font-size: 15px;" +
+                        "-fx-text-fill: #666666;"
         );
 
         Label availabilityLabel = new Label();

@@ -15,34 +15,35 @@ public class Main extends Application {
     public void start(Stage stage) {
 
         // Application title
-        Label title = new Label("LifeLink");
+        Label title = new Label("LifeLink ❤️");
         title.setStyle(
-                "-fx-font-size: 36px;" +
+                "-fx-font-size: 38px;" +
                         "-fx-font-weight: bold;" +
                         "-fx-text-fill: #c62828;"
         );
 
-        // Subtitle
-        Label subtitle = new Label("Local Blood Donor Finder");
-        subtitle.setStyle("-fx-font-size: 18px;");
+// Subtitle
+        Label subtitle = new Label("Connecting Hearts, Saving Lives");
+        subtitle.setStyle(
+                "-fx-font-size: 20px;" +
+                        "-fx-font-weight: bold;" +
+                        "-fx-text-fill: #444444;"
+        );
 
         Label message = new Label(
-                "Connecting blood donors with people in need."
+                "Every drop counts. Every connection matters. " +
+                        "Together, we can make a difference. 🩸"
         );
-        message.setStyle("-fx-font-size: 14px;");
-
+        message.setStyle(
+                "-fx-font-size: 15px;" +
+                        "-fx-text-fill: #666666;"
+        );
         // Buttons
         Button loginButton = new Button("Login");
         Button registerButton = new Button("Register");
-        Button searchButton = new Button("Find Blood Donors");
-        Button requestButton = new Button("Request Blood");
-        Button historyButton = new Button("My Blood Requests");
 
         loginButton.setPrefWidth(220);
         registerButton.setPrefWidth(220);
-        searchButton.setPrefWidth(220);
-        requestButton.setPrefWidth(220);
-        historyButton.setPrefWidth(220);
 
         loginButton.setStyle(
                 "-fx-background-color: #c62828;" +
@@ -56,20 +57,6 @@ public class Main extends Application {
                         "-fx-cursor: hand;"
         );
 
-        searchButton.setStyle(
-                "-fx-font-size: 15px;" +
-                        "-fx-cursor: hand;"
-        );
-
-        requestButton.setStyle(
-                "-fx-font-size: 15px;" +
-                        "-fx-cursor: hand;"
-        );
-        historyButton.setStyle(
-                "-fx-font-size: 15px;" +
-                        "-fx-cursor: hand;"
-        );
-
         // Connect buttons to their screens
         loginButton.setOnAction(
                 e -> new LoginScreen().show()
@@ -79,16 +66,7 @@ public class Main extends Application {
                 e -> new RegisterScreen().show()
         );
 
-        searchButton.setOnAction(
-                e -> new DonorSearchScreen().show()
-        );
 
-        requestButton.setOnAction(
-                e -> new BloodRequestScreen().show()
-        );
-        historyButton.setOnAction(
-                e -> new MyRequestsScreen().show()
-        );
 
         // Footer
         Label footer = new Label(
@@ -107,9 +85,6 @@ public class Main extends Application {
                 message,
                 loginButton,
                 registerButton,
-                searchButton,
-                requestButton,
-                historyButton,
                 footer
         );
 

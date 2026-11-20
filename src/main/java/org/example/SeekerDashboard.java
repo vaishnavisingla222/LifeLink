@@ -22,7 +22,7 @@ public class SeekerDashboard {
         Stage stage = new Stage();
         stage.setTitle("LifeLink - Seeker Dashboard");
 
-        Label title = new Label("Seeker Dashboard");
+        Label title = new Label("Find Your Lifeline ❤️");
         title.setStyle(
                 "-fx-font-size: 28px;" +
                         "-fx-font-weight: bold;" +
@@ -30,12 +30,21 @@ public class SeekerDashboard {
         );
 
         Label welcome = new Label(
-                "Welcome, " + user.getFullName() + "!"
+                "Hello, " + user.getFullName() + "! ✨"
         );
-        welcome.setStyle("-fx-font-size: 18px;");
+        welcome.setStyle(
+                "-fx-font-size: 20px;" +
+                        "-fx-font-weight: bold;" +
+                        "-fx-text-fill: #333333;"
+        );
 
         Label info = new Label(
-                "Find blood donors and manage your blood requests."
+                "Every second counts. Find the help you need, " +
+                        "connect with donors, and bring hope closer. 🩸"
+        );
+        info.setStyle(
+                "-fx-font-size: 15px;" +
+                        "-fx-text-fill: #666666;"
         );
 
         Button searchButton = new Button("Find Blood Donors");
