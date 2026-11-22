@@ -23,15 +23,23 @@ public class MyRequestsScreen {
         String name;
         String bloodGroup;
         String city;
+        String area;
+        String pincode;
+        String phone;
         String available;
         String responseStatus;
 
         DonorInfo(int donorId, String name, String bloodGroup,
-                  String city, String available, String responseStatus) {
+                  String city, String area, String pincode,
+                  String phone, String available, String responseStatus) {
+
             this.donorId = donorId;
             this.name = name;
             this.bloodGroup = bloodGroup;
             this.city = city;
+            this.area = area;
+            this.pincode = pincode;
+            this.phone = phone;
             this.available = available;
             this.responseStatus = responseStatus;
         }
@@ -420,7 +428,13 @@ public class MyRequestsScreen {
         );
 
         TableView<DonorInfo> donorTable = new TableView<>();
+        donorTable.setColumnResizePolicy(
+                TableView.CONSTRAINED_RESIZE_POLICY
+        );
 
+        donorTable.setPlaceholder(
+                new Label("No interested donors found.")
+        );
         TableColumn<DonorInfo, String> nameColumn =
                 new TableColumn<>("Donor Name");
         nameColumn.setCellValueFactory(data ->
@@ -436,6 +450,21 @@ public class MyRequestsScreen {
         cityColumn.setCellValueFactory(data ->
                 new SimpleStringProperty(data.getValue().city));
 
+        TableColumn<DonorInfo, String> areaColumn =
+                new TableColumn<>("Area");
+        areaColumn.setCellValueFactory(data ->
+                new SimpleStringProperty(data.getValue().area));
+
+        TableColumn<DonorInfo, String> pincodeColumn =
+                new TableColumn<>("Pincode");
+        pincodeColumn.setCellValueFactory(data ->
+                new SimpleStringProperty(data.getValue().pincode));
+
+        TableColumn<DonorInfo, String> phoneColumn =
+                new TableColumn<>("Phone");
+        phoneColumn.setCellValueFactory(data ->
+                new SimpleStringProperty(data.getValue().phone));
+
         TableColumn<DonorInfo, String> availableColumn =
                 new TableColumn<>("Available");
         availableColumn.setCellValueFactory(data ->
@@ -446,13 +475,16 @@ public class MyRequestsScreen {
         statusColumn.setCellValueFactory(data ->
                 new SimpleStringProperty(data.getValue().responseStatus));
 
+        donorTable.getColumns().clear();
         donorTable.getColumns().addAll(
-                nameColumn, bloodColumn, cityColumn,
-                availableColumn, statusColumn
-        );
-
-        donorTable.setColumnResizePolicy(
-                TableView.CONSTRAINED_RESIZE_POLICY
+                nameColumn,
+                bloodColumn,
+                cityColumn,
+                areaColumn,
+                pincodeColumn,
+                phoneColumn,
+                availableColumn,
+                statusColumn
         );
 
         Label message = new Label();
@@ -473,21 +505,27 @@ public class MyRequestsScreen {
             selectButton.setDisable(true);
 
             String sql = """
-                    SELECT d.donor_id, u.full_name,
-                           d.blood_group, d.city, d.available,
-                           dr.response_status,
-                           br.selected_donor_id
-                    FROM donor_responses dr
-                    JOIN donors d ON dr.donor_id = d.donor_id
-                    JOIN users u ON d.user_id = u.user_id
-                    JOIN blood_requests br
-                        ON dr.request_id = br.request_id
-                    WHERE dr.request_id = ?
-                      AND br.seeker_id = ?
-                      AND dr.response_status IN
-                          ('INTERESTED', 'SELECTED', 'NOT_SELECTED')
-                    ORDER BY dr.responded_at DESC
-                    """;
+        SELECT d.donor_id,
+               u.full_name,
+               d.blood_group,
+               COALESCE(u.city, '') AS city,
+               COALESCE(u.area, '') AS area,
+               COALESCE(u.pincode, '') AS pincode,
+               COALESCE(u.phone, '') AS phone,
+               d.available,
+               dr.response_status,
+               br.selected_donor_id
+        FROM donor_responses dr
+        JOIN donors d ON dr.donor_id = d.donor_id
+        JOIN users u ON d.user_id = u.user_id
+        JOIN blood_requests br
+            ON dr.request_id = br.request_id
+        WHERE dr.request_id = ?
+          AND br.seeker_id = ?
+          AND dr.response_status IN
+              ('INTERESTED', 'SELECTED', 'NOT_SELECTED')
+        ORDER BY dr.responded_at DESC
+        """;
 
             try (Connection connection = DBConnection.getConnection();
                  PreparedStatement statement =
@@ -516,6 +554,9 @@ public class MyRequestsScreen {
                                 result.getString("full_name"),
                                 result.getString("blood_group"),
                                 result.getString("city"),
+                                result.getString("area"),
+                                result.getString("pincode"),
+                                result.getString("phone"),
                                 result.getBoolean("available")
                                         ? "Yes" : "No",
                                 result.getString("response_status")

@@ -1,4 +1,3 @@
-
 package org.example;
 
 import javafx.geometry.Insets;
@@ -22,6 +21,7 @@ public class RegisterScreen {
         Label title = new Label("Create Your LifeLink Account");
         title.setStyle("-fx-font-size: 22px; -fx-font-weight: bold;");
 
+        // Common fields for all users
         TextField nameField = new TextField();
         nameField.setPromptText("Full Name");
 
@@ -31,19 +31,8 @@ public class RegisterScreen {
         PasswordField passwordField = new PasswordField();
         passwordField.setPromptText("Password (minimum 8 characters)");
 
-        ComboBox<String> roleBox = new ComboBox<>();
-        roleBox.getItems().addAll("SEEKER", "DONOR");
-        roleBox.setValue("SEEKER");
-        roleBox.setMaxWidth(Double.MAX_VALUE);
-
-        Label bloodLabel = new Label("Blood Group");
-
-        ComboBox<String> bloodGroupBox = new ComboBox<>();
-        bloodGroupBox.getItems().addAll(
-                "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"
-        );
-        bloodGroupBox.setPromptText("Select Blood Group");
-        bloodGroupBox.setMaxWidth(Double.MAX_VALUE);
+        TextField phoneField = new TextField();
+        phoneField.setPromptText("Phone Number");
 
         TextField cityField = new TextField();
         cityField.setPromptText("City");
@@ -53,6 +42,21 @@ public class RegisterScreen {
 
         TextField pincodeField = new TextField();
         pincodeField.setPromptText("Pincode");
+
+        ComboBox<String> roleBox = new ComboBox<>();
+        roleBox.getItems().addAll("SEEKER", "DONOR");
+        roleBox.setValue("SEEKER");
+        roleBox.setMaxWidth(Double.MAX_VALUE);
+
+        // Donor-only fields
+        Label bloodLabel = new Label("Blood Group");
+
+        ComboBox<String> bloodGroupBox = new ComboBox<>();
+        bloodGroupBox.getItems().addAll(
+                "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"
+        );
+        bloodGroupBox.setPromptText("Select Blood Group");
+        bloodGroupBox.setMaxWidth(Double.MAX_VALUE);
 
         CheckBox availableBox = new CheckBox("Available to donate blood");
         availableBox.setSelected(true);
@@ -65,9 +69,6 @@ public class RegisterScreen {
                 bloodDetailsLabel,
                 bloodLabel,
                 bloodGroupBox,
-                cityField,
-                areaField,
-                pincodeField,
                 availableBox
         );
 
@@ -76,6 +77,7 @@ public class RegisterScreen {
 
         roleBox.valueProperty().addListener((obs, oldValue, newValue) -> {
             boolean isDonor = "DONOR".equals(newValue);
+
             donorFields.setVisible(isDonor);
             donorFields.setManaged(isDonor);
         });
@@ -87,67 +89,99 @@ public class RegisterScreen {
         messageLabel.setWrapText(true);
 
         registerButton.setOnAction(event -> {
+
             String name = nameField.getText().trim();
             String email = emailField.getText().trim();
             String password = passwordField.getText();
+            String phone = phoneField.getText().trim();
+            String city = cityField.getText().trim();
+            String area = areaField.getText().trim();
+            String pincode = pincodeField.getText().trim();
             String role = roleBox.getValue();
 
-            if (name.isEmpty() || email.isEmpty() || password.isEmpty()) {
+            // Validate common fields
+            if (name.isEmpty() || email.isEmpty() || password.isEmpty()
+                    || phone.isEmpty() || city.isEmpty()
+                    || area.isEmpty() || pincode.isEmpty()) {
+
+                messageLabel.setStyle("-fx-text-fill: red;");
                 messageLabel.setText("Please fill in all required fields.");
                 return;
             }
 
+            // Validate email
             if (!email.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
+                messageLabel.setStyle("-fx-text-fill: red;");
                 messageLabel.setText("Please enter a valid email address.");
                 return;
             }
 
+            // Validate password
             if (password.length() < 8) {
-                messageLabel.setText("Password must be at least 8 characters.");
+                messageLabel.setStyle("-fx-text-fill: red;");
+                messageLabel.setText(
+                        "Password must be at least 8 characters."
+                );
+                return;
+            }
+
+            // Validate phone number
+            if (!phone.matches("\\d{10}")) {
+                messageLabel.setStyle("-fx-text-fill: red;");
+                messageLabel.setText(
+                        "Phone number must contain exactly 10 digits."
+                );
+                return;
+            }
+
+            // Validate pincode
+            if (!pincode.matches("\\d{6}")) {
+                messageLabel.setStyle("-fx-text-fill: red;");
+                messageLabel.setText(
+                        "Pincode must contain exactly 6 digits."
+                );
                 return;
             }
 
             String bloodGroup = bloodGroupBox.getValue();
-            String city = cityField.getText().trim();
-            String area = areaField.getText().trim();
-            String pincode = pincodeField.getText().trim();
 
+            // Donor-specific validation
             if ("DONOR".equals(role)) {
-                if (bloodGroup == null || city.isEmpty()) {
+                if (bloodGroup == null) {
+                    messageLabel.setStyle("-fx-text-fill: red;");
                     messageLabel.setText(
-                            "Donors must select a blood group and enter a city."
-                    );
-                    return;
-                }
-
-                if (!pincode.isEmpty() && !pincode.matches("\\d{6}")) {
-                    messageLabel.setText(
-                            "Pincode must contain exactly 6 digits."
+                            "Please select your blood group."
                     );
                     return;
                 }
             }
 
+            // Insert common user information
             String userSql = """
-                    INSERT INTO users (full_name, email, password_hash, role)
-                    VALUES (?, ?, ?, ?)
+                    INSERT INTO users
+                    (full_name, email, password_hash, role,
+                     phone, city, area, pincode)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     """;
 
+            // Insert donor-specific information
             String donorSql = """
                     INSERT INTO donors
-                    (user_id, blood_group, city, area, pincode, available)
-                    VALUES (?, ?, ?, ?, ?, ?)
+                    (user_id, blood_group, available)
+                    VALUES (?, ?, ?)
                     """;
 
             try {
                 String hashedPassword = PasswordUtil.hashPassword(password);
 
                 try (Connection connection = DBConnection.getConnection()) {
+
                     connection.setAutoCommit(false);
 
                     try {
                         int userId;
 
+                        // Insert into users table
                         try (PreparedStatement statement =
                                      connection.prepareStatement(
                                              userSql,
@@ -158,31 +192,38 @@ public class RegisterScreen {
                             statement.setString(2, email);
                             statement.setString(3, hashedPassword);
                             statement.setString(4, role);
+                            statement.setString(5, phone);
+                            statement.setString(6, city);
+                            statement.setString(7, area);
+                            statement.setString(8, pincode);
+
                             statement.executeUpdate();
 
-                            try (ResultSet keys = statement.getGeneratedKeys()) {
+                            try (ResultSet keys =
+                                         statement.getGeneratedKeys()) {
+
                                 if (!keys.next()) {
                                     throw new SQLException(
                                             "Could not retrieve the new user ID."
                                     );
                                 }
+
                                 userId = keys.getInt(1);
                             }
                         }
 
+                        // Insert donor information only for DONOR
                         if ("DONOR".equals(role)) {
+
                             try (PreparedStatement statement =
                                          connection.prepareStatement(donorSql)) {
 
                                 statement.setInt(1, userId);
                                 statement.setString(2, bloodGroup);
-                                statement.setString(3, city);
-                                statement.setString(4,
-                                        area.isEmpty() ? null : area);
-                                statement.setString(5,
-                                        pincode.isEmpty() ? null : pincode);
-                                statement.setBoolean(6,
-                                        availableBox.isSelected());
+                                statement.setBoolean(
+                                        3,
+                                        availableBox.isSelected()
+                                );
 
                                 statement.executeUpdate();
                             }
@@ -198,36 +239,50 @@ public class RegisterScreen {
                     }
                 }
 
+                // Registration success
                 messageLabel.setStyle("-fx-text-fill: green;");
                 messageLabel.setText(
                         "Registration successful! You can now log in."
                 );
 
+                // Clear fields
                 nameField.clear();
                 emailField.clear();
                 passwordField.clear();
-                bloodGroupBox.setValue(null);
+                phoneField.clear();
                 cityField.clear();
                 areaField.clear();
                 pincodeField.clear();
+                bloodGroupBox.setValue(null);
                 availableBox.setSelected(true);
                 roleBox.setValue("SEEKER");
 
             } catch (java.security.GeneralSecurityException e) {
-                messageLabel.setText("Could not secure the password.");
+                messageLabel.setStyle("-fx-text-fill: red;");
+                messageLabel.setText(
+                        "Could not secure the password."
+                );
                 e.printStackTrace();
 
             } catch (SQLException e) {
+                messageLabel.setStyle("-fx-text-fill: red;");
+
                 if (e.getErrorCode() == 1062) {
-                    messageLabel.setText("This email is already registered.");
+                    messageLabel.setText(
+                            "This email is already registered."
+                    );
                 } else {
                     messageLabel.setText(
                             "Database error: " + e.getMessage()
                     );
                     e.printStackTrace();
                 }
+
             } catch (Exception e) {
-                messageLabel.setText("Registration failed. Please try again.");
+                messageLabel.setStyle("-fx-text-fill: red;");
+                messageLabel.setText(
+                        "Registration failed. Please try again."
+                );
                 e.printStackTrace();
             }
         });
@@ -238,6 +293,10 @@ public class RegisterScreen {
                 nameField,
                 emailField,
                 passwordField,
+                phoneField,
+                cityField,
+                areaField,
+                pincodeField,
                 new Label("Account Type"),
                 roleBox,
                 donorFields,
@@ -252,7 +311,8 @@ public class RegisterScreen {
         ScrollPane scrollPane = new ScrollPane(layout);
         scrollPane.setFitToWidth(true);
 
-        Scene scene = new Scene(scrollPane, 440, 600);
+        Scene scene = new Scene(scrollPane, 440, 650);
+
         stage.setScene(scene);
         stage.show();
     }

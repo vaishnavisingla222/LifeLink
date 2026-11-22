@@ -24,18 +24,25 @@ public class DonorRequestsScreen {
         String bloodGroup;
         String hospital;
         String city;
+        String area;
+        String pincode;
+        String phone;
         String units;
         String urgency;
         String date;
 
         BloodRequest(int requestId, String bloodGroup,
                      String hospital, String city,
+                     String area, String pincode, String phone,
                      String units, String urgency, String date) {
 
             this.requestId = requestId;
             this.bloodGroup = bloodGroup;
             this.hospital = hospital;
             this.city = city;
+            this.area = area;
+            this.pincode = pincode;
+            this.phone = phone;
             this.units = units;
             this.urgency = urgency;
             this.date = date;
@@ -77,6 +84,23 @@ public class DonorRequestsScreen {
 
         TableColumn<BloodRequest, String> cityColumn =
                 new TableColumn<>("City");
+        TableColumn<BloodRequest, String> areaColumn =
+                new TableColumn<>("Area");
+
+        areaColumn.setCellValueFactory(data ->
+                new SimpleStringProperty(data.getValue().area));
+
+        TableColumn<BloodRequest, String> pincodeColumn =
+                new TableColumn<>("Pincode");
+
+        pincodeColumn.setCellValueFactory(data ->
+                new SimpleStringProperty(data.getValue().pincode));
+
+        TableColumn<BloodRequest, String> phoneColumn =
+                new TableColumn<>("Phone number");
+
+        phoneColumn.setCellValueFactory(data ->
+                new SimpleStringProperty(data.getValue().phone));
 
         cityColumn.setCellValueFactory(data ->
                 new SimpleStringProperty(data.getValue().city));
@@ -99,10 +123,15 @@ public class DonorRequestsScreen {
         dateColumn.setCellValueFactory(data ->
                 new SimpleStringProperty(data.getValue().date));
 
+        table.getColumns().clear();
+
         table.getColumns().addAll(
                 bloodColumn,
                 hospitalColumn,
                 cityColumn,
+                areaColumn,
+                pincodeColumn,
+                phoneColumn,
                 unitsColumn,
                 urgencyColumn,
                 dateColumn
@@ -207,19 +236,28 @@ public class DonorRequestsScreen {
             responseButton.setDisable(true);
 
             String sql = """
-                    SELECT request_id, blood_group, hospital_name,
-                           city, units_needed, urgency, created_at
-                    FROM blood_requests
-                    WHERE status = 'OPEN'
-                      AND blood_group IN (%s)
-                    ORDER BY
-                        CASE urgency
-                            WHEN 'EMERGENCY' THEN 1
-                            WHEN 'URGENT' THEN 2
-                            ELSE 3
-                        END,
-                        created_at DESC
-                    """;
+        SELECT br.request_id,
+               br.blood_group,
+               br.hospital_name,
+               br.city,
+               u.area,
+               u.pincode,
+               u.phone,
+               br.units_needed,
+               br.urgency,
+               br.created_at
+        FROM blood_requests br
+        JOIN users u ON br.seeker_id = u.user_id
+        WHERE br.status = 'OPEN'
+          AND br.blood_group IN (%s)
+        ORDER BY
+            CASE br.urgency
+                WHEN 'EMERGENCY' THEN 1
+                WHEN 'URGENT' THEN 2
+                ELSE 3
+            END,
+            br.created_at DESC
+        """;
 
             try (Connection connection = DBConnection.getConnection()) {
 
@@ -268,13 +306,12 @@ public class DonorRequestsScreen {
                                     result.getString("blood_group"),
                                     result.getString("hospital_name"),
                                     result.getString("city"),
-                                    String.valueOf(
-                                            result.getInt("units_needed")
-                                    ),
+                                    result.getString("area"),
+                                    result.getString("pincode"),
+                                    result.getString("phone"),
+                                    String.valueOf(result.getInt("units_needed")),
                                     result.getString("urgency"),
-                                    String.valueOf(
-                                            result.getTimestamp("created_at")
-                                    )
+                                    String.valueOf(result.getTimestamp("created_at"))
                             ));
                         }
                     }

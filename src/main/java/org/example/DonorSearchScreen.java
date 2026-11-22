@@ -1,4 +1,3 @@
-
 package org.example;
 
 import javafx.collections.FXCollections;
@@ -96,8 +95,11 @@ public class DonorSearchScreen {
             table.getItems().clear();
 
             String sql = """
-                    SELECT u.full_name, d.blood_group, d.city,
-                           COALESCE(d.area, ''), u.email,
+                    SELECT u.full_name,
+                           d.blood_group,
+                           u.city,
+                           COALESCE(u.area, ''),
+                           u.email,
                            CASE
                                WHEN d.available = TRUE
                                THEN 'AVAILABLE'
@@ -106,7 +108,7 @@ public class DonorSearchScreen {
                     FROM donors d
                     JOIN users u ON d.user_id = u.user_id
                     WHERE d.blood_group = ?
-                      AND LOWER(d.city) LIKE LOWER(?)
+                      AND LOWER(u.city) LIKE LOWER(?)
                       AND u.role = 'DONOR'
                       AND (
                           ? = 'All Donors'
